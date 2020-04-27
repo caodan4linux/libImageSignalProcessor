@@ -97,7 +97,7 @@ static inline uint16_t bayerAt(const BayerImageData &bayerImage,
 }
 
 /* BilinearInterpolation Pixel R */
-static void BI_Pixel_R(int row, int col,
+static inline void BI_Pixel_R(int row, int col,
                        const BayerImageData &bayerImage,
                        uint16_t &R, uint16_t &G, uint16_t &B)
 {
@@ -133,7 +133,7 @@ static void BI_Pixel_R(int row, int col,
 }
 
 /* BilinearInterpolation Pixel Gr */
-static void BI_Pixel_Gr(int row, int col,
+static inline void BI_Pixel_Gr(int row, int col,
                        const BayerImageData &bayerImage,
                        uint16_t &R, uint16_t &G, uint16_t &B)
 {
@@ -149,7 +149,7 @@ static void BI_Pixel_Gr(int row, int col,
 }
 
 /* BilinearInterpolation Pixel Gb */
-static void BI_Pixel_Gb(int row, int col,
+static inline void BI_Pixel_Gb(int row, int col,
                        const BayerImageData &bayerImage,
                        uint16_t &R, uint16_t &G, uint16_t &B)
 {
@@ -164,7 +164,7 @@ static void BI_Pixel_Gb(int row, int col,
         B = static_cast<uint32_t>(B1 + B2) / 2;
 }
 
-static void BI_Pixel_B(int row, int col,
+static inline void BI_Pixel_B(int row, int col,
                        const BayerImageData &bayerImage,
                        uint16_t &R, uint16_t &G, uint16_t &B)
 {
@@ -196,10 +196,10 @@ static void BI_Pixel_B(int row, int col,
         B = bayerAt(bayerImage, col, row);
 }
 
-void Demosaic::bayerRGGB2RGB_BI(int row, int col,
+static inline void RGGB2RGB_BI(int row, int col,
                               const BayerImageData &bayerImage,
                               BayerCFAPattern_e cfa,
-                              uint16_t &R, uint16_t &G, uint16_t &B) const
+                              uint16_t &R, uint16_t &G, uint16_t &B)
 {
     if (row % 2 == 0 && col % 2 == 0) {
         BI_Pixel_R(row, col, bayerImage, R, G, B);
@@ -212,10 +212,10 @@ void Demosaic::bayerRGGB2RGB_BI(int row, int col,
     }
 }
 
-void Demosaic::bayerGRBG2RGB_BI(int row, int col,
+static inline void GRBG2RGB_BI(int row, int col,
                               const BayerImageData &bayerImage,
                               BayerCFAPattern_e cfa,
-                              uint16_t &R, uint16_t &G, uint16_t &B) const
+                              uint16_t &R, uint16_t &G, uint16_t &B)
 {
     if (row % 2 == 0 && col % 2 == 0) {
         BI_Pixel_Gr(row, col, bayerImage, R, G, B);
@@ -228,10 +228,10 @@ void Demosaic::bayerGRBG2RGB_BI(int row, int col,
     }
 }
 
-void Demosaic::bayerGBRG2RGB_BI(int row, int col,
+static inline void GBRG2RGB_BI(int row, int col,
                               const BayerImageData &bayerImage,
                               BayerCFAPattern_e cfa,
-                              uint16_t &R, uint16_t &G, uint16_t &B) const
+                              uint16_t &R, uint16_t &G, uint16_t &B)
 {
     if (row % 2 == 0 && col % 2 == 0) {
         BI_Pixel_Gb(row, col, bayerImage, R, G, B);
@@ -244,10 +244,10 @@ void Demosaic::bayerGBRG2RGB_BI(int row, int col,
     }
 }
 
-void Demosaic::bayerBGGR2RGB_BI(int row, int col,
+static inline void BGGR2RGB_BI(int row, int col,
                               const BayerImageData &bayerImage,
                               BayerCFAPattern_e cfa,
-                              uint16_t &R, uint16_t &G, uint16_t &B) const
+                              uint16_t &R, uint16_t &G, uint16_t &B)
 {
     if (row % 2 == 0 && col % 2 == 0) {
         BI_Pixel_B(row, col, bayerImage, R, G, B);
@@ -294,7 +294,7 @@ int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
             for (int col = 0; col < bayerImage.width; col++) {
                 uint16_t R, G, B;
 
-                bayerRGGB2RGB_BI(row, col, bayerImage, cfa, R, G, B);
+                RGGB2RGB_BI(row, col, bayerImage, cfa, R, G, B);
 
                 rgbLineBuf[col * 3]     = CLAMP((R >> shift), 0, 255);
                 rgbLineBuf[col * 3 + 1] = CLAMP((G >> shift), 0, 255);
@@ -308,7 +308,7 @@ int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
             for (int col = 0; col < bayerImage.width; col++) {
                 uint16_t R, G, B;
 
-                bayerBGGR2RGB_BI(row, col, bayerImage, cfa, R, G, B);
+                BGGR2RGB_BI(row, col, bayerImage, cfa, R, G, B);
 
                 rgbLineBuf[col * 3]     = (R >> shift);
                 rgbLineBuf[col * 3 + 1] = (G >> shift);
@@ -322,7 +322,7 @@ int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
             for (int col = 0; col < bayerImage.width; col++) {
                 uint16_t R, G, B;
 
-                bayerGRBG2RGB_BI(row, col, bayerImage, cfa, R, G, B);
+                GRBG2RGB_BI(row, col, bayerImage, cfa, R, G, B);
 
                 rgbLineBuf[col * 3]     = (R >> shift);
                 rgbLineBuf[col * 3 + 1] = (G >> shift);
@@ -336,7 +336,7 @@ int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
             for (int col = 0; col < bayerImage.width; col++) {
                 uint16_t R, G, B;
 
-                bayerGBRG2RGB_BI(row, col, bayerImage, cfa, R, G, B);
+                GBRG2RGB_BI(row, col, bayerImage, cfa, R, G, B);
 
                 rgbLineBuf[col * 3]     = (R >> shift);
                 rgbLineBuf[col * 3 + 1] = (G >> shift);

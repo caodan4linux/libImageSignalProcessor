@@ -38,26 +38,6 @@ private:
     enum DemosaicInterPolation m_interpolationMethod;
     uint8_t *m_gammaLUT;
 
-    void bayerRGGB2RGB_BI(int row, int col,
-                              const BayerImageData &bayerImage,
-                              BayerCFAPattern_e cfa,
-                              uint16_t &R, uint16_t &G, uint16_t &B) const;
-
-    void bayerGRBG2RGB_BI(int row, int col,
-                              const BayerImageData &bayerImage,
-                              BayerCFAPattern_e cfa,
-                              uint16_t &R, uint16_t &G, uint16_t &B) const;
-
-    void bayerGBRG2RGB_BI(int row, int col,
-                              const BayerImageData &bayerImage,
-                              BayerCFAPattern_e cfa,
-                              uint16_t &R, uint16_t &G, uint16_t &B) const;
-
-    void bayerBGGR2RGB_BI(int row, int col,
-                              const BayerImageData &bayerImage,
-                              BayerCFAPattern_e cfa,
-                              uint16_t &R, uint16_t &G, uint16_t &B) const;
-
     int bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
                               BayerCFAPattern_e cfa,
                               RGBImageData &rgbImage) const;
