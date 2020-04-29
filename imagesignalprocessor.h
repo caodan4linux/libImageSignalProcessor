@@ -53,7 +53,10 @@ struct BayerImageData {
     void *imageData;  /*!< point to the image data */
 
     BayerImageData()
-        : format (FORMAT_RAW12_UNPACKED)
+        : width (0)
+        , stride (0)
+        , height (0)
+        , format (FORMAT_RAW12_UNPACKED)
         , imageData (nullptr)
     {
     }
@@ -112,10 +115,12 @@ struct RGBImageData {
     RGBFormat_e format;
 
     void *imageData;  /*!< point to the image data */
-    size_t bufSize;
 
     RGBImageData()
-        : format (FORMAT_RGB32)
+        : width (0)
+        , stride (0)
+        , height (0)
+        , format (FORMAT_RGB32)
         , imageData (nullptr)
     {
     }

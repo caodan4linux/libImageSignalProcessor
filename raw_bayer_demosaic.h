@@ -27,6 +27,7 @@ public:
 
     /**
      * @brief convert bayer image to RGB image
+     * @details support RGB888 and RGB32 format
      * @param[in]  bayerImage
      * @param[in]  cfa
      * @param[out] rgbImage
@@ -38,9 +39,13 @@ private:
     enum DemosaicInterPolation m_interpolationMethod;
     uint8_t *m_gammaLUT;
 
-    int bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
-                              BayerCFAPattern_e cfa,
-                              RGBImageData &rgbImage) const;
+    int bayer2RGB888_BilinearInterpolation(const BayerImageData &bayerImage,
+                                           BayerCFAPattern_e cfa,
+                                           RGBImageData &rgbImage) const;
+
+    int bayer2RGB32_BilinearInterpolation(const BayerImageData &bayerImage,
+                                           BayerCFAPattern_e cfa,
+                                           RGBImageData &rgbImage) const;
 };
 
 END_NAMESPACE_ISP

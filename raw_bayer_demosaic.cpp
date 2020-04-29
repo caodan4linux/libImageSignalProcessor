@@ -48,9 +48,16 @@ Demosaic::Demosaic()
 int Demosaic::bayer2RGB(const BayerImageData &bayerImage,
                          BayerCFAPattern_e cfa, RGBImageData &rgbImage) const
 {
-    if (m_interpolationMethod == BILINEAR_INTERPOLATION)
-        bayer2RGB_BilinearInterpolation(bayerImage, cfa, rgbImage);
-    else {
+    if (m_interpolationMethod == BILINEAR_INTERPOLATION) {
+        if (rgbImage.format == FORMAT_RGB888)
+            bayer2RGB888_BilinearInterpolation(bayerImage, cfa, rgbImage);
+        else if (rgbImage.format == FORMAT_RGB32)
+            bayer2RGB32_BilinearInterpolation(bayerImage, cfa, rgbImage);
+        else {
+            std::cout << "Unsupport rgb format " << rgbImage.format << std::endl;
+            return -1;
+        }
+    } else {
         std::cout << "Unsupport alg " << m_interpolationMethod << std::endl;
         return -1;
     }
@@ -256,13 +263,11 @@ static inline void BGGR2RGB_BI(int row, int col,
     }
 }
 
-int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
-                              BayerCFAPattern_e cfa,
-                              RGBImageData &rgbImage) const
+static int _get_output_shift(RawFormat_e format)
 {
-    register int shift;
+    int shift;
 
-    switch (bayerImage.format) {
+    switch (format) {
     case FORMAT_RAW8:
         shift = 0;
         break;
@@ -279,9 +284,26 @@ int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
         shift = 8;
         break;
     default:
-        std::cout << "Invalid bayer mem format " << bayerImage.format << std::endl;
+        std::cout << "Invalid bayer mem format " << format << std::endl;
         return -1;
     }
+
+    return shift;
+}
+
+/*
+ * 1st bytes: R
+ * 2nd bytes: G
+ * 3rd bytes: B
+ */
+int Demosaic::bayer2RGB888_BilinearInterpolation(const BayerImageData &bayerImage,
+                              BayerCFAPattern_e cfa,
+                              RGBImageData &rgbImage) const
+{
+    int shift = _get_output_shift(bayerImage.format);
+
+    if (shift < 0)
+        return -1;
 
     if (cfa == BAYER_CFA_RGGB) {
         for (int row = 0; row < bayerImage.height; row++) {
@@ -306,9 +328,9 @@ int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
 
                 BGGR2RGB_BI(row, col, bayerImage, R, G, B);
 
-                rgbLineBuf[col * 3]     = (R >> shift);
-                rgbLineBuf[col * 3 + 1] = (G >> shift);
-                rgbLineBuf[col * 3 + 2] = (B >> shift);
+                rgbLineBuf[col * 3]     = CLAMP((R >> shift), 0, 255);
+                rgbLineBuf[col * 3 + 1] = CLAMP((G >> shift), 0, 255);
+                rgbLineBuf[col * 3 + 2] = CLAMP((B >> shift), 0, 255);
             }
         }
     } else if (cfa == BAYER_CFA_GRBG) {
@@ -320,9 +342,9 @@ int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
 
                 GRBG2RGB_BI(row, col, bayerImage, R, G, B);
 
-                rgbLineBuf[col * 3]     = (R >> shift);
-                rgbLineBuf[col * 3 + 1] = (G >> shift);
-                rgbLineBuf[col * 3 + 2] = (B >> shift);
+                rgbLineBuf[col * 3]     = CLAMP((R >> shift), 0, 255);
+                rgbLineBuf[col * 3 + 1] = CLAMP((G >> shift), 0, 255);
+                rgbLineBuf[col * 3 + 2] = CLAMP((B >> shift), 0, 255);
             }
         }
     } else {
@@ -334,9 +356,86 @@ int Demosaic::bayer2RGB_BilinearInterpolation(const BayerImageData &bayerImage,
 
                 GBRG2RGB_BI(row, col, bayerImage, R, G, B);
 
-                rgbLineBuf[col * 3]     = (R >> shift);
-                rgbLineBuf[col * 3 + 1] = (G >> shift);
-                rgbLineBuf[col * 3 + 2] = (B >> shift);
+                rgbLineBuf[col * 3]     = CLAMP((R >> shift), 0, 255);
+                rgbLineBuf[col * 3 + 1] = CLAMP((G >> shift), 0, 255);
+                rgbLineBuf[col * 3 + 2] = CLAMP((B >> shift), 0, 255);
+            }
+        }
+    }
+
+    return 0;
+}
+
+/*
+ * 32bit RGB format  32-bit RGB format (0xffRRGGBB)
+ */
+int Demosaic::bayer2RGB32_BilinearInterpolation(const BayerImageData &bayerImage,
+                              BayerCFAPattern_e cfa,
+                              RGBImageData &rgbImage) const
+{
+    int shift = _get_output_shift(bayerImage.format);
+
+    if (shift < 0)
+        return -1;
+
+    if (cfa == BAYER_CFA_RGGB) {
+        for (int row = 0; row < bayerImage.height; row++) {
+            uint32_t *rgbLineBuf = reinterpret_cast<uint32_t *>((intptr_t)rgbImage.imageData + row * rgbImage.stride);
+
+            for (int col = 0; col < bayerImage.width; col++) {
+                uint16_t R, G, B;
+
+                RGGB2RGB_BI(row, col, bayerImage, R, G, B);
+
+                R = CLAMP((R >> shift), 0, 255);
+                G = CLAMP((G >> shift), 0, 255);
+                B = CLAMP((B >> shift), 0, 255);
+                rgbLineBuf[col] = (0xff000000 | (R << 16) | (G << 8) | B);
+            }
+        }
+    } else if (cfa == BAYER_CFA_BGGR) {
+        for (int row = 0; row < bayerImage.height; row++) {
+            uint32_t *rgbLineBuf = reinterpret_cast<uint32_t *>((intptr_t)rgbImage.imageData + row * rgbImage.stride);
+
+            for (int col = 0; col < bayerImage.width; col++) {
+                uint16_t R, G, B;
+
+                BGGR2RGB_BI(row, col, bayerImage, R, G, B);
+
+                R = CLAMP((R >> shift), 0, 255);
+                G = CLAMP((G >> shift), 0, 255);
+                B = CLAMP((B >> shift), 0, 255);
+                rgbLineBuf[col] = (0xff000000 | (R << 16) | (G << 8) | B);
+            }
+        }
+    } else if (cfa == BAYER_CFA_GRBG) {
+        for (int row = 0; row < bayerImage.height; row++) {
+            uint32_t *rgbLineBuf = reinterpret_cast<uint32_t *>((intptr_t)rgbImage.imageData + row * rgbImage.stride);
+
+            for (int col = 0; col < bayerImage.width; col++) {
+                uint16_t R, G, B;
+
+                GRBG2RGB_BI(row, col, bayerImage, R, G, B);
+
+                R = CLAMP((R >> shift), 0, 255);
+                G = CLAMP((G >> shift), 0, 255);
+                B = CLAMP((B >> shift), 0, 255);
+                rgbLineBuf[col] = (0xff000000 | (R << 16) | (G << 8) | B);
+            }
+        }
+    } else {
+        for (int row = 0; row < bayerImage.height; row++) {
+            uint32_t *rgbLineBuf = reinterpret_cast<uint32_t *>((intptr_t)rgbImage.imageData + row * rgbImage.stride);
+
+            for (int col = 0; col < bayerImage.width; col++) {
+                uint16_t R, G, B;
+
+                GBRG2RGB_BI(row, col, bayerImage, R, G, B);
+
+                R = CLAMP((R >> shift), 0, 255);
+                G = CLAMP((G >> shift), 0, 255);
+                B = CLAMP((B >> shift), 0, 255);
+                rgbLineBuf[col] = (0xff000000 | (R << 16) | (G << 8) | B);
             }
         }
     }
